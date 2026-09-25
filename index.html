@@ -1754,6 +1754,10 @@
       <div class="sub" data-i18n="كيف بدك تشوف التصحيح؟">كيف بدك تشوف التصحيح؟</div>
     </div>
     <div class="panel">
+      <div class="order-toggle-row" id="part-tabs-row" style="display:none;">
+        <span class="order-toggle-lbl" data-i18n="الجزء:">الجزء:</span>
+        <div class="order-toggle-pills" id="part-tabs-pills"></div>
+      </div>
       <div class="order-toggle-row">
         <span class="order-toggle-lbl" data-i18n="ترتيب الأسئلة:">ترتيب الأسئلة:</span>
         <div class="order-toggle-pills">
@@ -2310,6 +2314,8 @@ const I18N = {
   "الجنس": "Gender",
   "الحادي عشر": "11th",
   "الثاني عشر": "12th",
+  "الجزء:": "Part:",
+  "الكل": "All",
   "توجيهي 2009 — الثاني عشر": "Tawjihi 2009 — 12th Grade",
   "صف الشهادة الثانوية": "The final certificate grade",
   "توجيهي 2009 · الثاني عشر": "Tawjihi 2009 · 12th Grade",
@@ -3234,10 +3240,54 @@ function renderLessons(){
 let orderPreference = 'random'; // 'random' or 'book'
 let timeIsUpNotice = false;
 
+// Some lessons are internally split into sub-parts (e.g. Biology Lesson 1 covers four
+// biomolecule families). When a lessonKey appears here, the mode screen shows a part
+// selector tab row; picking "all" reviews the whole lesson mixed together, picking a
+// specific part filters to just that part's questions. Every question in such a lesson
+// must carry a matching q.part value alongside its q.lesson value.
+const LESSON_PARTS = {
+  'biology-s1-l1': [
+    { key:'carbs', title:'الكربوهيدرات' },
+    { key:'proteins', title:'البروتينات' },
+    { key:'lipids', title:'الليبيدات' },
+    { key:'nucleic', title:'الحموض النووية' },
+  ],
+};
+let currentPart = 'all';
+
+function renderPartTabs(lessonKey){
+  const row = document.getElementById('part-tabs-row');
+  const pills = document.getElementById('part-tabs-pills');
+  const parts = LESSON_PARTS[lessonKey];
+  if(!parts){ row.style.display = 'none'; currentPart = 'all'; return; }
+  row.style.display = '';
+  pills.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'order-pill' + (currentPart === 'all' ? ' active' : '');
+  allBtn.textContent = t('الكل');
+  allBtn.onclick = () => { currentPart = 'all'; openModeScreen(lessonKey); };
+  pills.appendChild(allBtn);
+  parts.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'order-pill' + (currentPart === p.key ? ' active' : '');
+    btn.textContent = p.title; // part titles are lesson-content names, stay Arabic always
+    btn.onclick = () => { currentPart = p.key; openModeScreen(lessonKey); };
+    pills.appendChild(btn);
+  });
+}
+
+// Returns the QUESTIONS subset for a lesson, honoring the current part-tab selection
+// (LESSON_PARTS lessons only — lessons without parts just filter by q.lesson as before).
+function getLessonQuestions(lessonKey){
+  return QUESTIONS.filter(q => q.lesson === lessonKey && (currentPart === 'all' || q.part === currentPart));
+}
+
 function openModeScreen(lessonKey){
+  if(lessonKey !== currentLesson) currentPart = 'all'; // fresh lesson entry — part tabs (if any) start on "all"
   currentLesson = lessonKey;
   const { map: lessons } = getLessonsForSemester(currentSemester);
   document.getElementById('mode-lesson-name').textContent = lessons[lessonKey].title; // lesson names always stay Arabic
+  renderPartTabs(lessonKey);
 
   document.getElementById('order-random-btn').classList.toggle('active', orderPreference === 'random');
   document.getElementById('order-book-btn').classList.toggle('active', orderPreference === 'book');
@@ -3339,7 +3389,7 @@ let fcIndex = 0;
 
 function startFlashcards(lessonKey){
   currentLesson = lessonKey;
-  const pool = QUESTIONS.filter(q => q.lesson === lessonKey);
+  const pool = getLessonQuestions(lessonKey);
   flashcardQuestions = orderPreference === 'random' ? shuffle(pool) : pool.slice();
   fcIndex = 0;
   fcXpAwardedFor = new Set();
@@ -3400,7 +3450,7 @@ function buildTrueFalseSet(pool){
 
 function startTrueFalse(lessonKey){
   currentLesson = lessonKey;
-  const pool = QUESTIONS.filter(q => q.lesson === lessonKey);
+  const pool = getLessonQuestions(lessonKey);
   tfItems = buildTrueFalseSet(pool);
   tfIndex = 0; tfScore = 0; tfAnswersLog = [];
   showScreen('truefalse');
@@ -3479,7 +3529,7 @@ function startQuiz(lessonKey, exam, timerMinutes, customQuestions){
   currentLesson = lessonKey;
   examMode = !!exam;
   lastQuizCustomQuestions = customQuestions || null;
-  const filtered = customQuestions ? customQuestions : QUESTIONS.filter(q => q.lesson === lessonKey);
+  const filtered = customQuestions ? customQuestions : getLessonQuestions(lessonKey);
   quizQuestions = orderPreference === 'random' ? shuffle(filtered) : filtered.slice();
   currentIndex = 0;
   userAnswers = new Array(quizQuestions.length).fill(null);
