@@ -1662,7 +1662,7 @@
   <!-- Subjects -->
   <div id="screen-subjects" class="screen" style="display:none;">
     <div class="letterhead">
-      <div class="eyebrow" data-i18n="توجيهي 2010 · الحادي عشر">توجيهي 2010 · الحادي عشر</div>
+      <div class="eyebrow" id="subjects-eyebrow">توجيهي 2010 · الحادي عشر</div>
       <h1 data-i18n="اختر المادة">اختر المادة</h1>
       <div class="sub" data-i18n="اختر مادتك للبدء">اختر مادتك للبدء</div>
     </div>
@@ -2141,6 +2141,10 @@ const ICONS = {
   subjMath: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none">
   <path d="M5 5h13M5 19c3-3 5-9.3 3.5-14M18 19c-3-3-5-9.3-3.5-14" stroke="var(--crimson)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`,
+  subjBiology: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+  <path d="M7 3.5c3 3 3 5 0 8s-3 5 0 8.5M17 3.5c-3 3-3 5 0 8s3 5 0 8.5" stroke="var(--emerald)" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M7.5 7h9M6.7 11h10.6M6.7 13h10.6M7.5 17h9" stroke="var(--emerald)" stroke-width="1.3" stroke-linecap="round" opacity="0.75"/>
+</svg>`,
   repeatMistakes: `<svg viewBox="0 0 24 24" width="19" height="19" fill="none">
   <path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
   <path d="M17.7 3.2v3.6h-3.6M6.3 20.8v-3.6h3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2305,6 +2309,10 @@ const I18N = {
   "الثاني عشر (توجيهي)": "12th (Tawjihi)",
   "الجنس": "Gender",
   "الحادي عشر": "11th",
+  "الثاني عشر": "12th",
+  "توجيهي 2009 — الثاني عشر": "Tawjihi 2009 — 12th Grade",
+  "صف الشهادة الثانوية": "The final certificate grade",
+  "توجيهي 2009 · الثاني عشر": "Tawjihi 2009 · 12th Grade",
   "الرئيسية": "Home",
   "السؤال السابق": "Previous Question",
   "الساعة متأخرة... لو قررت تكمل مذاكرة، احنا معك خطوة خطوة. خذلك بريك إذا حسّيت إنك تعبان، الصحة أهم من أي علامة.": "It's late... if you're going to keep studying, we're with you every step. Take a break if you're tired — your health matters more than any grade.",
@@ -2671,12 +2679,14 @@ let profileReturnScreen = 'track';
 // heritageTheme:true means this subject gets its own exclusive skin (like history/Petra)
 // while inside the lesson-taking flow (lessons → mode → timer → quiz → results).
 const SUBJECTS = [
-  {key:'history', title:'التاريخ', icon:ICONS.subjHistory, heritageTheme:true, exclusiveTheme:'heritage'},
-  {key:'english', title:'اللغة الإنجليزية', icon:ICONS.subjEnglish, heritageTheme:false, exclusiveTheme:null},
-  {key:'arabic', title:'اللغة العربية', icon:ICONS.subjArabic, heritageTheme:false, exclusiveTheme:null},
-  {key:'islamic', title:'التربية الإسلامية', icon:ICONS.subjIslamic, heritageTheme:true, exclusiveTheme:'islamic'},
-  {key:'math', title:'الرياضيات', icon:ICONS.subjMath, heritageTheme:false, exclusiveTheme:null},
+  {key:'history', title:'التاريخ', icon:ICONS.subjHistory, heritageTheme:true, exclusiveTheme:'heritage', grade:'11-2010'},
+  {key:'english', title:'اللغة الإنجليزية', icon:ICONS.subjEnglish, heritageTheme:false, exclusiveTheme:null, grade:'11-2010'},
+  {key:'arabic', title:'اللغة العربية', icon:ICONS.subjArabic, heritageTheme:false, exclusiveTheme:null, grade:'11-2010'},
+  {key:'islamic', title:'التربية الإسلامية', icon:ICONS.subjIslamic, heritageTheme:true, exclusiveTheme:'islamic', grade:'11-2010'},
+  {key:'math', title:'الرياضيات', icon:ICONS.subjMath, heritageTheme:false, exclusiveTheme:null, grade:'11-2010'},
+  {key:'biology', title:'العلوم الحياتية', icon:ICONS.subjBiology, heritageTheme:false, exclusiveTheme:null, grade:'12-2009'},
 ];
+let currentGrade = '11-2010';
 let currentSubject = 'history';
 
 function getSubject(key){
@@ -2995,7 +3005,8 @@ function renderTrack(){
   const list = document.getElementById('track-list');
   list.innerHTML = '';
   const items = [
-    {title:t('توجيهي 2010 — الحادي عشر'), sub:t('المرحلة الأولى من التوجيهي'), available:true},
+    {grade:'11-2010', num: appLang === 'en' ? '11' : '١١', title:t('توجيهي 2010 — الحادي عشر'), sub:t('المرحلة الأولى من التوجيهي'), available:true},
+    {grade:'12-2009', num: appLang === 'en' ? '12' : '١٢', title:t('توجيهي 2009 — الثاني عشر'), sub:t('صف الشهادة الثانوية'), available:true},
   ];
   items.forEach((item, i) => {
     const tile = document.createElement('div');
@@ -3003,21 +3014,23 @@ function renderTrack(){
     tile.style.animationDelay = (i*0.06)+'s';
     tile.innerHTML = `
       <div class="tile-row">
-        <div class="icon-badge">${appLang === 'en' ? '11' : '١١'}</div>
+        <div class="icon-badge">${item.num}</div>
         <div><div class="ttitle">${item.title}</div><div class="tsub">${item.sub}</div></div>
       </div>
       <div class="arrow">‹</div>
     `;
-    if(item.available) tile.onclick = () => { renderSubjects(); showScreen('subjects'); };
+    if(item.available) tile.onclick = () => { currentGrade = item.grade; renderSubjects(); showScreen('subjects'); };
     list.appendChild(tile);
   });
 }
 
 // ---- Subjects screen ----
 function renderSubjects(){
+  const eyebrow = document.getElementById('subjects-eyebrow');
+  if(eyebrow) eyebrow.textContent = (currentGrade === '12-2009') ? t('توجيهي 2009 · الثاني عشر') : t('توجيهي 2010 · الحادي عشر');
   const list = document.getElementById('subjects-list');
   list.innerHTML = '';
-  SUBJECTS.forEach((s,i) => {
+  SUBJECTS.filter(s => s.grade === currentGrade).forEach((s,i) => {
     const count = QUESTIONS.filter(q => q.subject === s.key).length;
     const available = count > 0;
     const tile = document.createElement('div');
@@ -3043,7 +3056,8 @@ function renderSemester(){
   const eyebrow = document.getElementById('semester-eyebrow');
   if(eyebrow) eyebrow.textContent = t('مادة:') + ' ' + t(subj.title);
   const sub = document.getElementById('semester-subtitle');
-  if(sub) sub.textContent = t(subj.title) + ' — ' + t('الحادي عشر أكاديمي');
+  const gradeLabel = currentGrade === '12-2009' ? t('الثاني عشر') : t('الحادي عشر أكاديمي');
+  if(sub) sub.textContent = t(subj.title) + ' — ' + gradeLabel;
 
   const list = document.getElementById('semester-list');
   list.innerHTML = '';
